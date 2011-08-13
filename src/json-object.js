@@ -29,15 +29,21 @@
  * @params name string Name of the object constructor
  * @params value string Objects data
  */
-function JSONObject (name, value) {
+function JSONObject (name, value, as_string) {
 	var undefined;
 	if(this instanceof arguments.callee) {
 		if(name === undefined) throw TypeError("name undefined");
 		if(value === undefined) throw TypeError("value undefined");
 		this.name = ""+name;
-		this.value = ""+value;
+		if(as_string || (typeof value === 'string') || (value instanceof String) ) {
+			this.type = "s";
+			this.value = ""+value;
+		} else {
+			this.type = "j";
+			this.value = JSON.stringify(value);
+		}
 	} else {
-		return new JSONObject(name, value);
+		return new JSONObject(name, value, as_string);
 	}
 }
 
@@ -60,7 +66,7 @@ JSONObject.prototype.__use_extended_format = function() {
 
 /** The valueOf() method returns the primitive value of a JSONObject. */
 JSONObject.prototype.valueOf = function() {
-	if(this.__use_extended_format()) return this.name + "(" + this.value + ")";
+	if(this.__use_extended_format()) return this.name + "(" + this.type + ":" + this.value + ")";
 	return this.value;
 };
 
@@ -68,11 +74,12 @@ JSONObject.prototype.valueOf = function() {
  * @returns instance of same type as the original JavaScript object
  */
 JSONObject.prototype.reviver = function() {
-	if( JSONObject.revivers[this.name] &&
-	   (typeof JSONObject.revivers[this.name] === "function") ) {
-		return (JSONObject.revivers[this.name])(this.value);
+	if(! ( JSONObject.revivers[this.name] && (typeof JSONObject.revivers[this.name] === "function") )) {
+		throw new ReferenceError("could not find reviver for " + this.name);
 	}
-	throw new ReferenceError("could not find reviver for " + this.name);
+	var type = this.type,
+	    value = (type === "j") ? JSON.parse(this.value) : this.value;
+	return (JSONObject.revivers[this.name])(value);
 };
 
 /** Convert JSONObject as JSON string
@@ -90,10 +97,10 @@ JSONObject.revivers = {};
 function do_override_globals(g, minimal) {
 	var exceptions = ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "URIError"];
 	
-	g.String.prototype.toJSON    = function() { return new JSONObject("String", this.valueOf() ); };
+	g.String.prototype.toJSON    = function() { return new JSONObject("String", this.valueOf(), true ); };
 	JSONObject.revivers.String = function(value) { return ""+value; };
 	
-	g.Date.prototype.toJSON      = function() { return new JSONObject("Date",   this.getTime() ); };
+	g.Date.prototype.toJSON      = function() { return new JSONObject("Date",   this.getTime(), true ); };
 	JSONObject.revivers.Date   = function(value) {
 		if(/^[0-9]+$/.test(value)) return new Date(parseInt(value, 10));
 		throw TypeError("illegal value: "+value);
@@ -105,7 +112,7 @@ function do_override_globals(g, minimal) {
 	/* Setup all exceptions with .toJSON() and revivers */
 	for(var i in exceptions) if(exceptions.hasOwnProperty(i)) {
 		(function(name) {
-			g[name].prototype.toJSON = function() { return new JSONObject(name, this.message); };
+			g[name].prototype.toJSON = function() { return new JSONObject(name, this.message, true); };
 			JSONObject.revivers[name] = function(value) { return new (g[name])(value); };
 		})(exceptions[i]);
 	}
@@ -127,15 +134,21 @@ JSONObject.replacer = function(key, value) {
  * @throws TypeError if illegal string content is detected.
  */
 JSONObject.parse = function(value) {
-	var value = ""+value;
-	if(!JSONObject.__use_extended_format(value)) return new JSONObject("String", value);
+	var value, items, name, data, arg, type;
 	
-	var items = value.split("(");
+	value = ""+value;
+	if(!JSONObject.__use_extended_format(value)) return new JSONObject("String", value, true);
+	
+	items = value.split("(");
 	if(items.length < 2) throw new TypeError("illegal input: "+value);
-	var name = items.shift();
-	var data = items.join("(");
+	name = items.shift();
+	data = items.join("(");
 	if(data.charAt(data.length-1) != ')') throw new TypeError("illegal input: "+value);
-	return new JSONObject(name, data.substr(0, data.length-1));
+	
+	arg = data.substr(0, data.length-1);
+	type = (arg[0] === "j") ? "j" : "s";
+	if(arg[1] !== ":") throw new TypeError("illegal input: "+value);
+	return new JSONObject(name, ((type === "j") ? JSON.parse(arg.substr(2)) : arg.substr(2)), ((type === "j") ? false : true) );
 };
 
 /** Reviver to implement support for JSONObject extension
