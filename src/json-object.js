@@ -86,8 +86,8 @@ JSONObject.prototype.toJSON = function() {
 /* JSONObject revivers */
 JSONObject.revivers = {};
 
-/* Override .toJSON()'s to support our extended JSONObject */
-function do_override_globals(g) {
+/* Override global .toJSON()'s to support our extended JSONObject */
+function do_override_globals(g, minimal) {
 	var exceptions = ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "URIError"];
 	
 	g.String.prototype.toJSON    = function() { return new JSONObject("String", this.valueOf() ); };
@@ -98,6 +98,9 @@ function do_override_globals(g) {
 		if(/^[0-9]+$/.test(value)) return new Date(parseInt(value, 10));
 		throw TypeError("illegal value: "+value);
 	};
+	
+	// Exit now if the user wanted only minimal global polution
+	if(minimal) return;
 	
 	/* Setup all exceptions with .toJSON() and revivers */
 	for(var i in exceptions) if(exceptions.hasOwnProperty(i)) {
@@ -152,12 +155,18 @@ JSONObject.reviver = function(key, value) {
 })();
 
 /* Exports for Node.js */
-exports.parse = function(item, r) { return JSON.parse(item, r) };
-exports.stringify = function(item, r) { return JSON.stringify(item, r) };
-
-exports.JSONObject = JSONObject;
-exports.revivers = JSONObject.revivers;
-
-exports.setup = do_override_globals;
+module.exports = (function() {
+	var mod = {};
+	
+	mod.parse = function(item, r) { return JSON.parse(item, r) };
+	mod.stringify = function(item, r) { return JSON.stringify(item, r) };
+	
+	mod.JSONObject = JSONObject;
+	mod.revivers = JSONObject.revivers;
+	
+	mod.setup = (function(g, minimal) { do_override_globals(g, minimal); return mod; });
+	
+	return mod;
+})();
 
 /* EOF */
