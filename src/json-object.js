@@ -83,28 +83,30 @@ JSONObject.prototype.toJSON = function() {
 };
 */
 
-/* Override .toJSON()'s to support our extended JSONObject */
-String.prototype.toJSON    = function() { return new JSONObject("String", this.valueOf() ); };
-Date.prototype.toJSON      = function() { return new JSONObject("Date",   this.getTime() ); };
-
 /* JSONObject revivers */
 JSONObject.revivers = {};
-JSONObject.revivers.String = function(value) { return ""+value; };
-JSONObject.revivers.Date   = function(value) {
-	if(/^[0-9]+$/.test(value)) return new Date(parseInt(value, 10));
-	throw TypeError("illegal value: "+value);
-};
 
-/* Setup all exceptions with .toJSON() and revivers */
-(function(global) {
+/* Override .toJSON()'s to support our extended JSONObject */
+function do_override_globals(g) {
 	var exceptions = ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "URIError"];
+	
+	g.String.prototype.toJSON    = function() { return new JSONObject("String", this.valueOf() ); };
+	JSONObject.revivers.String = function(value) { return ""+value; };
+	
+	g.Date.prototype.toJSON      = function() { return new JSONObject("Date",   this.getTime() ); };
+	JSONObject.revivers.Date   = function(value) {
+		if(/^[0-9]+$/.test(value)) return new Date(parseInt(value, 10));
+		throw TypeError("illegal value: "+value);
+	};
+	
+	/* Setup all exceptions with .toJSON() and revivers */
 	for(var i in exceptions) if(exceptions.hasOwnProperty(i)) {
-		(function(global, name) {
-			global[name].prototype.toJSON = function() { return new JSONObject(name, this.message); };
-			JSONObject.revivers[name] = function(value) { return new (global[name])(value); };
-		})(global, exceptions[i]);
+		(function(name) {
+			g[name].prototype.toJSON = function() { return new JSONObject(name, this.message); };
+			JSONObject.revivers[name] = function(value) { return new (g[name])(value); };
+		})(exceptions[i]);
 	}
-})(this);
+}
 
 /** Replacer to implement support for JSONObject extension
  * @throws TypeError if a string is detected, because all normal strings should 
@@ -152,5 +154,10 @@ JSONObject.reviver = function(key, value) {
 /* Exports for Node.js */
 exports.parse = function(item, r) { return JSON.parse(item, r) };
 exports.stringify = function(item, r) { return JSON.stringify(item, r) };
+
+exports.JSONObject = JSONObject;
+exports.revivers = JSONObject.revivers;
+
+exports.setup = do_override_globals;
 
 /* EOF */
