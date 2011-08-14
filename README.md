@@ -46,6 +46,9 @@ Parsing is also done by calling `json.parse()` in standard way:
 	var parsed_data = json.parse(str);
 	console.log("parsed_data = " + sys.inspect(parsed_data));
 	
+Extending to support your own objects
+-------------------------------------
+
 You can also extend `json-object` to support your own objects:
 
 	// Our custom object
