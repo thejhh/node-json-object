@@ -177,7 +177,13 @@ module.exports = (function() {
 	mod.JSONObject = JSONObject;
 	mod.revivers = JSONObject.revivers;
 	
-	mod.setup = (function(g, minimal) { do_override_globals(g, minimal); return mod; });
+	var once = false;
+	mod.setup = (function(g, minimal) { 
+		if(once) return mod;
+		do_override_globals(g, minimal);
+		once = true;
+		return mod;
+	});
 	
 	return mod;
 })();
