@@ -25,6 +25,10 @@
  * SOFTWARE.
  */
 
+/* Exports for Node.js */
+module.exports = (function() {
+	var _mod = {};
+	
 /** Special element constructor for JSON to implement extended object serialization
  * @params name string Name of the object constructor
  * @params value string Objects data
@@ -40,7 +44,7 @@ function JSONObject (name, value, as_string) {
 			this.value = ""+value;
 		} else {
 			this.type = "j";
-			this.value = JSON.stringify(value);
+			this.value = _mod.stringify(value);
 		}
 	} else {
 		return new JSONObject(name, value, as_string);
@@ -78,7 +82,7 @@ JSONObject.prototype.reviver = function() {
 		throw new ReferenceError("could not find reviver for " + this.name);
 	}
 	var type = this.type,
-	    value = (type === "j") ? JSON.parse(this.value) : this.value;
+	    value = (type === "j") ? _mod.parse(this.value) : this.value;
 	return (JSONObject.revivers[this.name])(value);
 };
 
@@ -148,7 +152,7 @@ JSONObject.parse = function(value) {
 	arg = data.substr(0, data.length-1);
 	type = (arg[0] === "j") ? "j" : "s";
 	if(arg[1] !== ":") throw new TypeError("illegal input: "+value);
-	return new JSONObject(name, ((type === "j") ? JSON.parse(arg.substr(2)) : arg.substr(2)), ((type === "j") ? false : true) );
+	return new JSONObject(name, ((type === "j") ? _mod.parse(arg.substr(2)) : arg.substr(2)), ((type === "j") ? false : true) );
 };
 
 /** Reviver to implement support for JSONObject extension
@@ -159,33 +163,21 @@ JSONObject.reviver = function(key, value) {
 	return JSONObject.parse(value).reviver();
 };
 
-/* Override JSON.parse and JSON.stringify to use our extended format by default */
-(function() {
-	var __JSON_parse = JSON.parse,
-	    __JSON_stringify = JSON.stringify;
-	JSON.parse     = function(item, r) { return __JSON_parse    (item, r || JSONObject.reviver);  };
-	JSON.stringify = function(item, r) { return __JSON_stringify(item, r || JSONObject.replacer); };
-})();
-
-/* Exports for Node.js */
-module.exports = (function() {
-	var mod = {};
+	_mod.parse     = function(item, r) { return JSON.parse    (item, r || JSONObject.reviver);  };
+	_mod.stringify = function(item, r) { return JSON.stringify(item, r || JSONObject.replacer); };
 	
-	mod.parse = function(item, r) { return JSON.parse(item, r) };
-	mod.stringify = function(item, r) { return JSON.stringify(item, r) };
-	
-	mod.JSONObject = JSONObject;
-	mod.revivers = JSONObject.revivers;
+	_mod.JSONObject = JSONObject;
+	_mod.revivers = JSONObject.revivers;
 	
 	var once = false;
-	mod.setup = (function(g, minimal) { 
-		if(once) return mod;
+	_mod.setup = (function(g, minimal) { 
+		if(once) return _mod;
 		do_override_globals(g, minimal);
 		once = true;
-		return mod;
+		return _mod;
 	});
 	
-	return mod;
+	return _mod;
 })();
 
 /* EOF */
