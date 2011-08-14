@@ -100,14 +100,14 @@ function do_override_globals(g, minimal) {
 	g.String.prototype.toJSON    = function() { return new JSONObject("String", this.valueOf(), true ); };
 	JSONObject.revivers.String = function(value) { return ""+value; };
 	
+	// Exit now if the user wanted only minimal global polution
+	if(minimal) return;
+	
 	g.Date.prototype.toJSON      = function() { return new JSONObject("Date",   this.getTime(), true ); };
 	JSONObject.revivers.Date   = function(value) {
 		if(/^[0-9]+$/.test(value)) return new Date(parseInt(value, 10));
 		throw TypeError("illegal value: "+value);
 	};
-	
-	// Exit now if the user wanted only minimal global polution
-	if(minimal) return;
 	
 	/* Setup all exceptions with .toJSON() and revivers */
 	for(var i in exceptions) if(exceptions.hasOwnProperty(i)) {
