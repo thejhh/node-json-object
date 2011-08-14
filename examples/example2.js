@@ -1,4 +1,4 @@
-var json = require('json-object').setup(global, true),
+var json = require('json-object').setup(global),
     sys = require('sys');
 
 // Our custom object

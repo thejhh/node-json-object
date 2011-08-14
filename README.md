@@ -29,11 +29,11 @@ MIT-style license, see [INSTALL.txt](http://github.com/jheusala/node-json-object
 Example Code
 ------------
 
-Before using the library the `require('json-object').setup(global, minimal)` 
+Before using the library the `require('json-object').setup(global[, minimal])` 
 has to be called to setup global objects. If `minimal` is `true`, then only 
 minimal changes are done. That means only `String.prototype.toJSON` is changed.
 
-	var json = require('json-object').setup(global, true);
+	var json = require('json-object').setup(global);
 
 Encoding as JSON string is done by calling `json.stringify()` in usual way:
 
